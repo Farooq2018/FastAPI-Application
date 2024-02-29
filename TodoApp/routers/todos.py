@@ -75,3 +75,19 @@ async def edit_todo_commit(request: Request, todo_id: int, title: str = Form(...
     db.commit()
 
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/delete/{todo_id}")
+async def delete_todo(todo_id: int, db: Session = Depends(get_db)):
+
+    todo_model = (db.query(Todos).filter(Todos.id == todo_id)
+                  .filter(Todos.owner_id == 1).first())
+
+    if todo_model is None:
+        return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+
+    db.query(Todos).filter(Todos.id == todo_id).delete()
+
+    db.commit()
+
+    return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
