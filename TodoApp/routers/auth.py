@@ -1,13 +1,13 @@
 from datetime import timedelta, datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Form, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette import status
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import RedirectResponse
 
 from ..database import SessionLocal, engine
 from ..models import Base, Users
@@ -18,15 +18,6 @@ SECRET_KEY = "KlgH6AzYDeZeGwD288to79I3vTHT8wp7"
 ALGORITHM = "HS256"
 
 templates = Jinja2Templates(directory="TodoApp/templates")
-
-
-class CreateUser(BaseModel):
-    username: str
-    email: Optional[str]
-    first_name: str
-    last_name: str
-    password: str
-
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -101,27 +92,10 @@ async def get_current_user(request: Request):
         username: str = payload.get("sub")
         user_id: int = payload.get("id")
         if username is None or user_id is None:
-            return None
+            logout(request)
         return {"username": username, "id": user_id}
     except JWTError:
         raise get_user_exception()
-
-
-@router.post("/create/user")
-async def create_new_user(create_user: CreateUser, db: Session = Depends(get_db)):
-    create_user_model = Users()
-    create_user_model.email = create_user.email
-    create_user_model.username = create_user.username
-    create_user_model.first_name = create_user.first_name
-    create_user_model.last_name = create_user.last_name
-
-    hash_password = get_password_hash(create_user.password)
-
-    create_user_model.hashed_password = hash_password
-    create_user_model.is_active = True
-
-    db.add(create_user_model)
-    db.commit()
 
 
 @router.post("/token")
@@ -175,20 +149,30 @@ async def register(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 
-# Exceptions
-def get_user_exception():
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    return credentials_exception
+@router.post("/register", response_class=HTMLResponse)
+async def register_user(request: Request, email: str = Form(...), username: str = Form(...),
+                        firstname: str = Form(...), lastname: str = Form(...),
+                        password: str = Form(...), password2: str = Form(...),
+                        db: Session = Depends(get_db)):
+    validation1 = db.query(Users).filter(Users.username == username).first()
+    validation2 = db.query(Users).filter(Users.email == email).first()
 
+    if password != password2 or validation1 is not None or validation2 is not None:
+        msg = "Invalid registration request"
+        return templates.TemplateResponse("register.html", {"request": request, "msg": msg})
 
-def token_exception():
-    token_exception_response = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Incorrect username or password",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    return token_exception_response
+    user_model = Users()
+    user_model.username = username
+    user_model.email = email
+    user_model.first_name = firstname
+    user_model.last_name = lastname
+
+    hash_password = get_password_hash(password)
+    user_model.hashed_password = hash_password
+    user_model.is_active = True
+
+    db.add(user_model)
+    db.commit()
+
+    msg = "User successfully created"
+    return templates.TemplateResponse("login.html", {"request": request, "msg": msg})
