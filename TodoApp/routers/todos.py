@@ -62,7 +62,7 @@ async def edit_todo(request: Request, todo_id: int, db: Session = Depends(get_db
 
 
 @router.post("/edit-todo/{todo_id}", response_class=HTMLResponse)
-async def edit_todo_commit(request: Request, todo_id: int, title: str = Form(...),
+async def edit_todo_commit(todo_id: int, title: str = Form(...),
                            description: str = Form(...), priority: int = Form(...),
                            db: Session = Depends(get_db)):
     todo_model = db.query(Todos).filter(Todos.id == todo_id).first()

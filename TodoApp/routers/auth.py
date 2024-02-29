@@ -7,6 +7,8 @@ from starlette import status
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from starlette.responses import RedirectResponse, Response
+
 from ..database import SessionLocal, engine
 from ..models import Base, Users
 from fastapi.responses import HTMLResponse
@@ -37,6 +39,18 @@ router = APIRouter(
     tags=["auth"],
     responses={401: {"user": "Not authorized"}}
 )
+
+
+class LoginForm:
+    def __init__(self, request: Request, ):
+        self.request: Request = request
+        self.username: Optional[str] = None
+        self.password: Optional[str] = None
+
+    async def create_oauth_form(self):
+        form = await self.request.form()
+        self.username = form.get("email")
+        self.password = form.get("password")
 
 
 def get_db():
@@ -108,21 +122,41 @@ async def create_new_user(create_user: CreateUser, db: Session = Depends(get_db)
 
 
 @router.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(),
                                  db: Session = Depends(get_db)):
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
-        raise token_exception()
-    token_expires = timedelta(minutes=20)
+        return False
+    token_expires = timedelta(minutes=60)
     token = create_access_token(user.username,
                                 user.id,
                                 expires_delta=token_expires)
-    return {"token": token}
+
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return True
 
 
 @router.get("/", response_class=HTMLResponse)
 async def authentication_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
+
+
+@router.post("/", response_class=HTMLResponse)
+async def login(request: Request, db: Session = Depends(get_db)):
+    try:
+        form = LoginForm(request)
+        await form.create_oauth_form()
+        response = RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+
+        validate_user_cookie = await login_for_access_token(response=response, form_data=form, db=db)
+
+        if not validate_user_cookie:
+            msg = "Incorrect Username or Password"
+            return templates.TemplateResponse("login.html", {"request": request, "msg": msg})
+        return response
+    except HTTPException:
+        msg = "Unknown Error"
+        return templates.TemplateResponse("login.html", {"request": request, "msg": msg})
 
 
 @router.get("/register", response_class=HTMLResponse)
