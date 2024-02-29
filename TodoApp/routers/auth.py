@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette import status
@@ -9,9 +9,13 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from ..database import SessionLocal, engine
 from ..models import Base, Users
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 SECRET_KEY = "KlgH6AzYDeZeGwD288to79I3vTHT8wp7"
 ALGORITHM = "HS256"
+
+templates = Jinja2Templates(directory="TodoApp/templates")
 
 
 class CreateUser(BaseModel):
@@ -27,7 +31,6 @@ bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 Base.metadata.create_all(bind=engine)
 
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
-
 
 router = APIRouter(
     prefix="/auth",
@@ -53,8 +56,8 @@ def verify_password(plain_password, hashed_password):
 
 
 def authenticate_user(username: str, password: str, db):
-    user = db.query(Users)\
-        .filter(Users.username == username)\
+    user = db.query(Users) \
+        .filter(Users.username == username) \
         .first()
 
     if not user:
@@ -66,7 +69,6 @@ def authenticate_user(username: str, password: str, db):
 
 def create_access_token(username: str, user_id: int,
                         expires_delta: Optional[timedelta] = None):
-
     encode = {"sub": username, "id": user_id}
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -118,7 +120,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"token": token}
 
 
-#Exceptions
+@router.get("/", response_class=HTMLResponse)
+async def authentication_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@router.get("/register", response_class=HTMLResponse)
+async def register(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+# Exceptions
 def get_user_exception():
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
