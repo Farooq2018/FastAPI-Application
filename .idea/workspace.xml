@@ -8,7 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TodoApp/routers/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/TodoApp/routers/auth.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TodoApp/routers/todos.py" beforeDir="false" afterPath="$PROJECT_DIR$/TodoApp/routers/todos.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TodoApp/templates/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/TodoApp/templates/login.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
