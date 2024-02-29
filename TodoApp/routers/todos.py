@@ -1,10 +1,6 @@
-from typing import Optional
 from fastapi import Depends, HTTPException, APIRouter, Request
 from ..models import Base, Todos
 from ..database import engine, SessionLocal
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-from .auth import get_current_user, get_user_exception
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
