@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import RedirectResponse
-from ..database import engine, SessionLocal
+from ..database import SessionLocal
 from .auth import get_current_user, verify_password, get_password_hash
 from ..models import Users
 from fastapi.responses import HTMLResponse
@@ -63,4 +63,3 @@ async def user_password_change(request: Request, username: str = Form(...),
             msg = 'Password Updated'
 
     return templates.TemplateResponse("edit-user-password.html", {"request": request, "user": user, "msg": msg})
-
